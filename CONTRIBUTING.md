@@ -28,3 +28,122 @@ Here are a few things you can do that will increase the likelihood of your pull 
 - [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
 - [Using Pull Requests](https://help.github.com/articles/about-pull-requests/)
 - [GitHub Help](https://help.github.com)
+using UnityEngine;
+
+public class FootballPlayerController : MonoBehaviour
+{
+    [Header("Player Movement")]
+    public float moveSpeed = 5f;
+    public float rotationSpeed = 10f;
+
+    [Header("Football")]
+    public Rigidbody football;
+    public Transform ballPosition;
+
+    [Header("Kick Power")]
+    public float passPower = 7f;
+    public float shootPower = 14f;
+
+    private Rigidbody playerRigidbody;
+    private Vector3 movement;
+
+    void Start()
+    {
+        playerRigidbody = GetComponent<Rigidbody>();
+
+        if (playerRigidbody != null)
+        {
+            playerRigidbody.constraints =
+                RigidbodyConstraints.FreezeRotationX |
+                RigidbodyConstraints.FreezeRotationZ;
+        }
+    }
+
+    void Update()
+    {
+        // Keyboard controls for testing in Unity
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
+
+        movement = new Vector3(horizontal, 0f, vertical);
+
+        if (movement.magnitude > 0.1f)
+        {
+            movement.Normalize();
+
+            Quaternion targetRotation =
+                Quaternion.LookRotation(movement);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (playerRigidbody == null)
+            return;
+
+        Vector3 newPosition =
+            playerRigidbody.position +
+            movement * moveSpeed * Time.fixedDeltaTime;
+
+        playerRigidbody.MovePosition(newPosition);
+    }
+
+    // PASS BUTTON
+    public void PassBall()
+    {
+        if (football == null)
+            return;
+
+        KickBall(passPower);
+    }
+
+    // SHOOT BUTTON
+    public void ShootBall()
+    {
+        if (football == null)
+            return;
+
+        KickBall(shootPower);
+    }
+
+    void KickBall(float power)
+    {
+        // Check that the ball is close enough
+        float distance = Vector3.Distance(
+            transform.position,
+            football.transform.position
+        );
+
+        if (distance > 3f)
+        {
+            Debug.Log("Ball is too far away!");
+            return;
+        }
+
+        // Move ball slightly in front of player
+        if (ballPosition != null)
+        {
+            football.transform.position =
+                ballPosition.position;
+        }
+
+        // Remove previous movement
+        football.linearVelocity = Vector3.zero;
+        football.angularVelocity = Vector3.zero;
+
+        // Kick the ball forward
+        Vector3 kickDirection =
+            transform.forward + Vector3.up * 0.08f;
+
+        football.AddForce(
+            kickDirection.normalized * power,
+            ForceMode.Impulse
+        );
+    }
+}
